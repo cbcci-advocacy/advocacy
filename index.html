@@ -63,7 +63,7 @@ h1{margin:0;font-size:clamp(26px,4.2vw,40px);font-weight:800;line-height:1.28;le
 .seal .big{font-size:52px;font-weight:800;background:var(--hl);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1;font-variant-numeric:tabular-nums}
 .seal .big small{font-size:22px}
 .seal .cap{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
-.asof{font-size:12.5px;color:var(--muted);margin-top:14px}
+.asof{font-size:12.5px;color:var(--muted);margin-top:18px}
 
 /* 패널 */
 main{display:grid;gap:18px;padding-top:22px;padding-bottom:20px}
@@ -261,9 +261,6 @@ html{scroll-behavior:smooth}
       <span class="chip">회원사 권익대변 실적 공개</span>
       <h1>회원사의 목소리,<br>이렇게 전달하고 있습니다.</h1>
       <p>기업 현장의 애로와 불합리한 제도를 정부·지자체·국회에 건의하고, 처리 결과를 그대로 공개합니다. 수용되지 않은 건도 사유와 함께 남기고 다시 추진합니다.</p>
-      <div class="btns">
-        <a class="btn primary" href="#list" data-reset>건의 처리 내역 보기</a>
-      </div>
       <div class="asof" id="asof"></div>
     </div>
     <aside class="contact" aria-labelledby="h-contact">
@@ -333,9 +330,9 @@ const CONFIG = {
   기관명: "충남북부상공회의소",
   로고파일: "",          // 비워 두면 기본 로고(파일 안에 내장). 다른 로고를 쓰려면 같은 저장소에 올린 파일 이름(예: "logo.png"), 로고를 빼려면 "없음"
   제작표시: "made by yerim",          // 예: "기획·제작 기업지원팀 홍길동". 비워 두면 표시하지 않음
-  담당부서: "○○팀",
-  전화: "000-000-0000",
-  이메일: "000@000.or.kr",
+  담당부서: "회원팀",
+  전화: "041-559-5708, 5718",
+  이메일: "tksgn715@korcham.net / yeforest@korcham.net",
   온라인접수주소: "",   // 구글 설문지 등 접수 페이지 주소가 있으면 넣으세요. 비워 두면 버튼이 숨겨집니다
   // 공개용 구글 시트 > 파일 > 공유 > 웹에 게시 > 'CSV'로 게시한 주소를 따옴표 안에 붙여 넣습니다.
   현황_CSV주소: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTbjrNzBpFdCyXwyP1Of26euPfy3PoMVWBKmskDIvWBlq-QSnJNgaUWZ6lrsyvFo5J6KI7zN6S1EaVJ/pub?gid=0&single=true&output=csv",
