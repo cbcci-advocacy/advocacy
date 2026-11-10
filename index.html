@@ -348,9 +348,9 @@ const CONFIG = {
   기관명: "충남북부상공회의소",
   로고파일: "",          // 비워 두면 기본 로고(파일 안에 내장). 다른 로고를 쓰려면 같은 저장소에 올린 파일 이름(예: "logo.png"), 로고를 빼려면 "없음"
   제작표시: "made by yerim",          // 예: "기획·제작 기업지원팀 홍길동". 비워 두면 표시하지 않음
-  담당부서: "○○팀",
-  전화: "000-000-0000",
-  이메일: "000@000.or.kr",
+  담당부서: "회원팀",
+  전화: "041-559-5708, 5718",
+  이메일: "tksgn715@korcham.net / yeforest@korcham.net",
   온라인접수주소: "",   // 구글 설문지 등 접수 페이지 주소가 있으면 넣으세요. 비워 두면 버튼이 숨겨집니다
   // 공개용 구글 시트 > 파일 > 공유 > 웹에 게시 > 'CSV'로 게시한 주소를 따옴표 안에 붙여 넣습니다.
   현황_CSV주소: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTbjrNzBpFdCyXwyP1Of26euPfy3PoMVWBKmskDIvWBlq-QSnJNgaUWZ6lrsyvFo5J6KI7zN6S1EaVJ/pub?gid=0&single=true&output=csv",
@@ -399,7 +399,7 @@ if (CONFIG.제작표시){ $("credit").textContent = CONFIG.제작표시; $("cred
   const ico = p => svg(p, 16, 1.8);
   const tel = CONFIG.전화 ? `<a class="ct-row" href="tel:${esc(CONFIG.전화.replace(/[^0-9+]/g,""))}">${ico('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>')}<span><small>전화</small>${esc(CONFIG.전화)}</span></a>` : "";
   const mail = CONFIG.이메일 ? `<a class="ct-row" href="mailto:${esc(CONFIG.이메일)}">${ico('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>')}<span><small>이메일</small>${esc(CONFIG.이메일)}</span></a>` : "";
-  const dept = CONFIG.담당부서 ? `<div class="ct-row">${ico('<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/>')}<span><small>담당</small>${esc(CONFIG.담당부서)}</span></div>` : "";
+  const dept = CONFIG.담당부서 ? `<div class="ct-row">${ico('<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/>')}<span><small>담당부서</small>${esc(CONFIG.담당부서)}</span></div>` : "";
   $("ct-rows").innerHTML = dept + tel + mail;
   if (CONFIG.온라인접수주소 && /^https?:\/\//.test(CONFIG.온라인접수주소)){ $("ct-online").href = CONFIG.온라인접수주소; $("ct-online").hidden = false; }
   $("ft-org").textContent = CONFIG.기관명;
