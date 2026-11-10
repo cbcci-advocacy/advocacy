@@ -39,7 +39,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+body{word-break:keep-all;overflow-wrap:break-word;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 a{color:var(--brand)}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
@@ -396,6 +396,7 @@ const svg = (p, s = 18, w = 1.7) => `<svg width="${s}" height="${s}" viewBox="0 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtDate = d => d ? d.replace(/-/g, ". ") + "." : "";
+const dispOrg = o => { o = String(o || "").split("(")[0].trim(); return /^대한상(의|공회의소)/.test(o) && !/[,·]/.test(o) ? "대한상의" : o; };
 const safeUrl = u => /^https?:\/\//i.test(u) ? u : "";
 
 const LOGO = CONFIG.로고파일 === "없음" ? "" : (CONFIG.로고파일 || LOGO_DEFAULT);
@@ -532,7 +533,7 @@ function draw(rows){
     return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt">${r.kind === REC ? `<span class="pill s-rec">성과 기록</span>` : `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`}<span class="wd">${fmtDate(r.date)}</span></div>
       <span class="wh">${esc(r.short || r.title)} ${rebadge(r)}</span>
       <span class="wr${r.win ? " win1" : ""}">${r.win ? esc(r.win) : (r.reply ? esc(r.reply) : "건의 내용이 관계기관에 반영되었습니다.")}</span>
-      <div class="tags">${r.event ? `<span class="tag ev">${esc(r.event)}</span>` : `<span class="tag">${esc(r.org)}</span>`}<span class="tag">${esc(r.field)}</span></div><span class="more-link">자세히 보기 ›</span></button>`;
+      <div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div><span class="more-link">자세히 보기 ›</span></button>`;
   }).join("");
 
   let limit = 15;
@@ -568,7 +569,7 @@ function draw(rows){
     $("ledger").innerHTML = list.length ? list.slice(0, limit).map((r,i) => `
       <div class="item" data-id="${esc(r.id)}"><button type="button" aria-expanded="false" aria-controls="d${i}">
         <div class="meta"><b>${esc(r.id)}</b>${fmtDate(r.date)}</div>
-        <div><div class="ttl">${esc(r.title)} ${rebadge(r)}</div><div class="tags">${r.event ? `<span class="tag ev">${esc(r.event)}</span>` : ""}<span class="tag">${esc(r.org)}</span><span class="tag">${esc(r.field)}</span></div></div>
+        <div><div class="ttl">${esc(r.title)} ${rebadge(r)}</div><div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div></div>
         ${pill(r)}</button>
         <div class="detail" id="d${i}"><dl>
           <dt>구분</dt><dd>${esc(r.kind)}</dd>
