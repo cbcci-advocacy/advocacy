@@ -198,6 +198,28 @@ button.fc:hover .go{color:var(--brand)}
 .tog{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13.5px}
 .tag.hl{background:var(--brand-soft);color:var(--brand);font-weight:600}
 [hidden]{display:none!important}
+/* 건의 이후 제도 변화 */
+.fu-tag{font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px}
+.fu-반영{color:var(--ok);background:var(--ok-bg)} .fu-일부반영{color:var(--part);background:var(--part-bg)}
+.fu-관련개선{color:var(--brand);background:var(--brand-soft)} .fu-정부안단계{color:var(--ing);background:var(--ing-bg)}
+.fu-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.fu-list li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.5}
+.fu-list .d{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px;margin-right:4px}
+.fu-list a{font-size:12.5px;font-weight:600;margin-left:4px;white-space:nowrap}
+.mk{font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap;background:var(--neutral-bg);color:var(--neutral)}
+.mk-반영{background:var(--ok-bg);color:var(--ok)} .mk-일부{background:var(--part-bg);color:var(--part)}
+.mk-진행{background:var(--ing-bg);color:var(--ing)} .mk-미반영,.mk-미확인{background:var(--neutral-bg);color:var(--neutral)}
+.fu-li.muted{color:var(--muted)}
+.fus{border-top:1px solid var(--line)}
+.fu-row{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:104px 1fr auto;gap:14px;align-items:start;padding:13px 6px;border-bottom:1px solid var(--line)}
+.fu-row:hover,.fu-row:focus-visible{background:var(--brand-soft)}
+.fu-row .t{font-weight:700;line-height:1.45}
+.fu-row .c{font-size:13.5px;color:var(--muted);margin-top:2px}
+.fu-row .c b{color:var(--ink);font-weight:600}
+.fu-row .w{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;line-height:1.5}
+.fu-row .w s{text-decoration:none;display:block}
+.fu-note{font-size:12.5px;color:var(--muted);margin-top:10px}
+@media (max-width:600px){.fu-row{grid-template-columns:1fr;gap:4px}.fu-row .w{text-align:left}}
 .hgrp+.hgrp{margin-top:10px}
 .hname{font-size:12.5px;font-weight:700;color:var(--brand);margin-bottom:4px}
 .hist{margin:0;padding-left:18px;display:grid;gap:4px}
@@ -317,6 +339,12 @@ html{scroll-behavior:smooth}
     <div class="cases" id="cases"></div>
   </section>
 
+  <section class="panel" id="fu-panel" aria-labelledby="h-fu" hidden>
+    <div class="ph"><div><h2 id="h-fu">건의 이후 제도 변화</h2><p>회신 결과와 별개로, 건의 후 법령·제도가 바뀐 건을 계속 확인해 기록합니다.</p></div><button type="button" class="link" id="fu-all">모두 보기</button></div>
+    <div class="fus" id="fus"></div>
+    <div class="fu-note">건의 이후의 변화를 정리한 것으로, 우리 건의만의 결과라는 뜻은 아닙니다.</div>
+  </section>
+
   <section class="panel" aria-labelledby="h-field">
     <div class="ph"><div><h2 id="h-field">분야별 건의 현황</h2><p>분야를 누르면 해당 분야의 건의 처리 내역으로 이동합니다.</p></div></div>
     <div class="fields" id="fields"></div>
@@ -397,6 +425,14 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtDate = d => d ? d.replace(/-/g, ". ") + "." : "";
 const dispOrg = o => { o = String(o || "").split("(")[0].trim(); return /^대한상(의|공회의소)/.test(o) && !/[,·]/.test(o) ? "대한상의" : o; };
+const FU_SHOW = ["반영","일부 반영","관련 개선","정부안 단계"];
+const FU_LABEL = {"반영":"건의 이후 반영","일부 반영":"건의 이후 일부 반영","관련 개선":"관련 제도 개선","정부안 단계":"정부안 반영 · 입법 중"};
+const fuCls = v => "fu-" + String(v).replace(/\s/g, "");
+const parseProg = t => String(t || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+  const p = l.split("|").map(x => x.trim()); const url = /^https?:\/\//i.test(p.at(-1) || "") ? p.pop() : "";
+  return { d: p[0] || "", m: p[1] || "", t: p.slice(2).join(" | "), url };
+});
+const progKey = d => { const m = String(d).match(/(\d{4})\D+(\d{1,2})(?:\D+(\d{1,2}))?/); return m ? m[1] + m[2].padStart(2,"0") + (m[3] || "00").padStart(2,"0") : ""; };
 const safeUrl = u => /^https?:\/\//i.test(u) ? u : "";
 
 const LOGO = CONFIG.로고파일 === "없음" ? "" : (CONFIG.로고파일 || LOGO_DEFAULT);
@@ -439,7 +475,8 @@ function toRow(o){
     title: pick(o,"제목"), short: pick(o,"짧은제목"), summary: pick(o,"건의요지"), status: pick(o,"처리결과"),
     reply: pick(o,"회신·후속조치","회신"), replyDate: toISO(pick(o,"회신일")),
     themes: pick(o,"연관주제").split("|").map(t => t.trim()).filter(Boolean),
-    docUrl: safeUrl(pick(o,"건의문")), replyUrl: safeUrl(pick(o,"회신문")), pin: /^(y|o|○|예)$/i.test(pick(o,"주요성과").trim()), event: pick(o,"계기"), win: pick(o,"성과한줄") };
+    docUrl: safeUrl(pick(o,"건의문")), replyUrl: safeUrl(pick(o,"회신문")), pin: /^(y|o|○|예)$/i.test(pick(o,"주요성과").trim()), event: pick(o,"계기"), win: pick(o,"성과한줄"),
+    refl: pick(o,"반영현황"), prog: parseProg(pick(o,"건의이후경과")) };
 }
 async function getCSV(url, label){
   let r;
@@ -536,12 +573,37 @@ function draw(rows){
       <div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div><span class="more-link">자세히 보기 ›</span></button>`;
   }).join("");
 
+  // 건의 이후 제도 변화: 같은 경과를 공유하는 건(같은 과제의 재건의)은 최신 건 하나로 묶어 보여 줌
+  const hasFu = r => FU_SHOW.includes(r.refl) && r.prog.length > 0;
+  const progList = r => `<ul class="fu-list">${r.prog.map(p => `<li class="fu-li${/미반영|미확인/.test(p.m) ? " muted" : ""}"><span class="mk mk-${esc(p.m)}">${esc(p.m || "참고")}</span><span>${p.d ? `<span class="d">${esc(p.d)}</span>` : ""}${esc(p.t)}${safeUrl(p.url) ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">근거 ›</a>` : ""}</span></li>`).join("")}</ul>`;
+  const fuGroups = (() => { const g = new Map();
+    main.filter(hasFu).forEach(r => { const k = r.prog.map(p => p.t).join("¶"); (g.get(k) || g.set(k, []).get(k)).push(r); });
+    return [...g.values()].map(rs => { rs.sort((a,b) => b.date.localeCompare(a.date));
+      const r = rs[0], done = r.prog.filter(p => /반영|일부|진행/.test(p.m) && p.m !== "미반영");
+      const latest = done[0] || r.prog[0];  // 경과 칸에 먼저 적은 줄을 대표로 표시
+      return { r, rs, latest, rank: FU_SHOW.indexOf(r.refl), key: progKey(latest.d) || "0" };
+    }).sort((a,b) => a.rank - b.rank || b.key.localeCompare(a.key) || b.r.date.localeCompare(a.r.date)); })();
+  let fuOpen = false;
+  const drawFu = () => {
+    $("fu-panel").hidden = !fuGroups.length;
+    $("fu-all").hidden = fuGroups.length <= 6;
+    $("fu-all").textContent = fuOpen ? "접기" : "모두 보기 (" + fuGroups.length + "건)";
+    $("fus").innerHTML = (fuOpen ? fuGroups : fuGroups.slice(0, 6)).map(({r, rs, latest}) => `
+      <button type="button" class="fu-row" data-id="${esc(r.id)}"><span><span class="fu-tag ${fuCls(r.refl)}">${esc(r.refl)}</span></span>
+        <span><span class="t">${esc(r.short || r.title)}</span><span class="c" style="display:block">${latest.d ? `<b>${esc(latest.d)}</b> ` : ""}${esc(latest.t)}</span></span>
+        <span class="w"><s>${r.date.slice(0,4)}. ${Number(r.date.slice(5,7))}. 건의${rs.length > 1 ? " · 관련 " + rs.length + "건" : ""}</s><s>당시 ${esc(LABEL[r.status] || r.status)}</s></span></button>`).join("");
+  };
+  drawFu();
+  $("fu-all").onclick = () => { fuOpen = !fuOpen; drawFu(); };
+  $("fus").addEventListener("click", e => { const b = e.target.closest(".fu-row[data-id]"); if (b) focusItem(b.dataset.id); });
+
   let limit = 15;
   const fy = $("f-year"), ff = $("f-field"), fst = $("f-status"), fq = $("f-q");
   const opt = (sel, label, vals, lab = v => v) => sel.innerHTML = `<option value="">${label}</option>` + vals.map(v => `<option value="${esc(v)}">${esc(lab(v))}</option>`).join("");
   opt(fy, "전체 연도", [...new Set(main.map(r => r.year))].sort().reverse(), v => v + "년");
   opt(ff, "전체 분야", [...FIELDS, ...new Set(main.map(r => r.field))].filter((f, i, a) => f && a.indexOf(f) === i && main.some(r => r.field === f)));
   opt(fst, "전체 결과", ORDER.filter(s => main.some(r => r.status === s)), s => LABEL[s]);
+  if (main.some(hasFu)) fst.insertAdjacentHTML("beforeend", `<option value="__fu">건의 이후 변화 있음</option>`);
 
   const pill = r => r.kind === REC ? `<span class="pill s-rec">성과 기록</span>` : `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`;
   const files = r => { const a = [];
@@ -560,16 +622,16 @@ function draw(rows){
   function render(){
     const q = fq.value.trim().toLowerCase();
     const list = ledgerSrc.filter(r => (!fy.value || String(r.year) === fy.value) && (!ff.value || r.field === ff.value)
-      && (!fst.value || r.status === fst.value)
+      && (!fst.value || (fst.value === "__fu" ? hasFu(r) : r.status === fst.value))
       && (!q || (r.title + " " + r.org + " " + r.summary).toLowerCase().includes(q))).sort((a,b) => b.date.localeCompare(a.date));
-    const active = [fy.value && fy.value + "년", ff.value, fst.value && LABEL[fst.value], q && "‘" + fq.value.trim() + "’ 검색"].filter(Boolean);
+    const active = [fy.value && fy.value + "년", ff.value, fst.value && (fst.value === "__fu" ? "건의 이후 변화 있음" : LABEL[fst.value]), q && "‘" + fq.value.trim() + "’ 검색"].filter(Boolean);
     const nRec = list.filter(r => r.kind === REC).length;
     $("count").textContent = (active.length ? active.join(" · ") + " · " : "전체 ") + "건의 " + (list.length - nRec) + "건" + (nRec ? " · 성과 기록 " + nRec + "건" : "");
     $("reset").hidden = !active.length;
     $("ledger").innerHTML = list.length ? list.slice(0, limit).map((r,i) => `
       <div class="item" data-id="${esc(r.id)}"><button type="button" aria-expanded="false" aria-controls="d${i}">
         <div class="meta"><b>${esc(r.id)}</b>${fmtDate(r.date)}</div>
-        <div><div class="ttl">${esc(r.title)} ${rebadge(r)}</div><div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div></div>
+        <div><div class="ttl">${esc(r.title)} ${rebadge(r)}</div><div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span>${hasFu(r) ? `<span class="fu-tag ${fuCls(r.refl)}">${esc(FU_LABEL[r.refl])}</span>` : ""}</div></div>
         ${pill(r)}</button>
         <div class="detail" id="d${i}"><dl>
           <dt>구분</dt><dd>${esc(r.kind)}</dd>
@@ -577,6 +639,7 @@ function draw(rows){
           ${r.summary ? `<dt>건의 요지</dt><dd class="pl">${esc(r.summary)}</dd>` : ""}
           <dt>처리 결과</dt><dd class="pl">${result(r)}</dd>
           ${r.win ? `<dt>성과</dt><dd><b>${esc(r.win)}</b></dd>` : ""}
+          ${hasFu(r) ? `<dt>건의 이후 경과</dt><dd>${progList(r)}</dd>` : ""}
           ${(t => t.length ? `<dt>함께 건의한 항목</dt><dd><ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul></dd>` : "")(together(r))}
           ${r.replyDate ? `<dt>회신일</dt><dd>${fmtDate(r.replyDate)}</dd>` : ""}
           ${histHtml(r)}
