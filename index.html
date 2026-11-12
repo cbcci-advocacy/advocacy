@@ -567,7 +567,7 @@ function draw(rows){
   const together = r => r.event ? main.filter(o => o !== r && o.date === r.date && o.event === r.event) : [];
   $("cases-panel").hidden = !wins.length;
   $("cases").innerHTML = wins.map(r => {
-    return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt">${r.kind === REC ? `<span class="pill s-rec">성과 기록</span>` : `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`}<span class="wd">${fmtDate(r.date)}</span></div>
+    return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt"><span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span><span class="wd">${fmtDate(r.date)}</span></div>
       <span class="wh">${esc(r.short || r.title)} ${rebadge(r)}</span>
       <span class="wr${r.win ? " win1" : ""}">${r.win ? esc(r.win) : (r.reply ? esc(r.reply) : "건의 내용이 관계기관에 반영되었습니다.")}</span>
       <div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div><span class="more-link">자세히 보기 ›</span></button>`;
@@ -605,17 +605,17 @@ function draw(rows){
   opt(fst, "전체 결과", ORDER.filter(s => main.some(r => r.status === s)), s => LABEL[s]);
   if (main.some(hasFu)) fst.insertAdjacentHTML("beforeend", `<option value="__fu">건의 이후 변화 있음</option>`);
 
-  const pill = r => r.kind === REC ? `<span class="pill s-rec">성과 기록</span>` : `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`;
+  const pill = r => `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`;
   const files = r => { const a = [];
     if (r.docUrl) a.push(`<a href="${esc(r.docUrl)}" target="_blank" rel="noopener">건의문 원문</a>`);
     if (r.replyUrl) a.push(`<a href="${esc(r.replyUrl)}" target="_blank" rel="noopener">회신문 원문</a>`);
     return a.length ? a.join("") : `<span class="none">원문 준비 중</span>`; };
-  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? "관계기관 회신을 기다리고 있습니다." : r.status === "결과확인필요" ? "관계기관에 건의를 전달했습니다." : r.status === "회신없음" ? "관계기관의 회신을 기다리고 있습니다." : esc(LABEL[r.status] || r.status);
+  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? "관계기관 회신을 기다리고 있습니다." : r.status === "결과확인필요" ? "관계기관에 건의를 전달했습니다." : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다." : esc(LABEL[r.status] || r.status);
   const histHtml = r => {
     const parts = r.themes.map(t => {
       const all = rows.filter(o => (MAIN.includes(o.kind) || o.kind === REC) && o.themes.includes(t)).sort((a,b) => a.date.localeCompare(b.date));
       if (all.length < 2) return "";
-      return `<div class="hgrp"><div class="hname">${esc(t)} · ${all.filter(o => o.kind !== REC).length}회 건의${all.some(o => o.kind === REC) ? " · 실현" : ""}</div><ol class="hist">${all.map(o => `<li${o === r ? ' class="me"' : ""}><span class="d">${fmtDate(o.date)}</span> ${esc(o.short || o.title)} ${o.kind === REC ? `<span class="hs s-rec">성과 기록</span>` : `<span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span>`}</li>`).join("")}</ol></div>`;
+      return `<div class="hgrp"><div class="hname">${esc(t)} · ${all.filter(o => o.kind !== REC).length}회 건의${all.some(o => o.kind === REC) ? " · 실현" : ""}</div><ol class="hist">${all.map(o => `<li${o === r ? ' class="me"' : ""}><span class="d">${fmtDate(o.date)}</span> ${esc(o.short || o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ol></div>`;
     }).join("");
     return parts ? `<dt>추진 이력</dt><dd>${parts}</dd>` : ""; };
 
@@ -626,7 +626,7 @@ function draw(rows){
       && (!q || (r.title + " " + r.org + " " + r.summary).toLowerCase().includes(q))).sort((a,b) => b.date.localeCompare(a.date));
     const active = [fy.value && fy.value + "년", ff.value, fst.value && (fst.value === "__fu" ? "건의 이후 변화 있음" : LABEL[fst.value]), q && "‘" + fq.value.trim() + "’ 검색"].filter(Boolean);
     const nRec = list.filter(r => r.kind === REC).length;
-    $("count").textContent = (active.length ? active.join(" · ") + " · " : "전체 ") + "건의 " + (list.length - nRec) + "건" + (nRec ? " · 성과 기록 " + nRec + "건" : "");
+    $("count").textContent = (active.length ? active.join(" · ") + " · " : "전체 ") + "건의 " + (list.length - nRec) + "건" + (nRec ? " · 건의 과제 해소 " + nRec + "건" : "");
     $("reset").hidden = !active.length;
     $("ledger").innerHTML = list.length ? list.slice(0, limit).map((r,i) => `
       <div class="item" data-id="${esc(r.id)}"><button type="button" aria-expanded="false" aria-controls="d${i}">
