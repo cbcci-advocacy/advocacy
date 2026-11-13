@@ -196,6 +196,12 @@ button.fc:hover .go{color:var(--brand)}
 .win .wr{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .win .wr.win1{color:var(--ink);font-weight:600;font-size:14px}
 .tog{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13.5px}
+.tgd>summary{cursor:pointer;font-size:13.5px;color:var(--c-accent,#1f4e79);list-style:none;display:inline-flex;align-items:center;gap:4px}
+.tgd>summary::-webkit-details-marker{display:none}
+.tgd>summary::before{content:"▸";font-size:11px}
+.tgd[open]>summary::before{content:"▾"}
+.tgd>summary:hover{text-decoration:underline}
+.tgd>.tog{margin-top:6px}
 .tag.hl{background:var(--brand-soft);color:var(--brand);font-weight:600}
 [hidden]{display:none!important}
 /* 건의 이후 제도 변화 */
@@ -395,10 +401,10 @@ const LOGO_DEFAULT = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAsQAAABgCAIA
 
 const MAIN = ["정책건의","기업애로해소"];
 const REC = "성과기록"; // 지속 건의 과제가 실현된 결과 기록: 건의 수에는 넣지 않음
-const LABEL = {"수용·해소":"수용·해소","부분수용":"부분수용","조치완료":"조치 완료","수용곤란":"수용곤란","진행중":"진행 중","회신없음":"회신 대기","결과확인필요":"건의 완료","해당없음":"완료"};
+const LABEL = {"수용·해소":"수용·해소","부분수용":"부분수용","조치완료":"조치 완료","수용곤란":"수용곤란","진행중":"진행 중","회신없음":"회신 없음","결과확인필요":"확인 중","해당없음":"완료"};
 const CLS = {"수용·해소":"s-ok","부분수용":"s-part","조치완료":"s-done","수용곤란":"s-no","진행중":"s-ing"};
 const COLOR = {"수용·해소":"var(--ok)","부분수용":"var(--part)","조치완료":"var(--done)","수용곤란":"var(--no)","진행중":"var(--ing)","회신없음":"var(--neutral)","결과확인필요":"color-mix(in srgb, var(--neutral) 40%, transparent)"};
-const ORDER = ["수용·해소","부분수용","조치완료","수용곤란","진행중","회신없음","결과확인필요"];
+const ORDER = ["수용·해소","부분수용","수용곤란","진행중","결과확인필요","회신없음"];
 const BAR_ORDER = ORDER.filter(s => s !== "결과확인필요"); // 막대·범례에는 결과가 나온 건만 색으로 표시
 const FIELDS = ["인력·고용","노동·안전","규제·인허가","세제·부담금","환경·에너지","교통·인프라","금융·투자","통상·해외","지역경제","기타"];
 const FIELD_STYLE = {
@@ -532,8 +538,8 @@ function draw(rows){
       <div><div class="n">${main.length}<small>건</small></div><div class="l">정책 건의 ${main.filter(r => r.kind === "정책건의").length} · 기업 애로 해소 ${main.filter(r => r.kind === "기업애로해소").length}${reCount ? "<br>재건의 " + reCount + "건 포함" : ""}</div></div></div>
     <div class="kpi ok"><div class="top"><span class="tagl">수용·해소</span><span class="ico">${svg(ICON.check,16)}</span></div>
       <div><div class="n">${won}<small>건</small></div><div class="l">${cnt(main,"부분수용") ? "부분수용 " + cnt(main,"부분수용") + "건 포함" : "건의 내용이 반영된 건"}</div></div></div>
-    <div class="kpi ing"><div class="top"><span class="tagl">진행 중</span><span class="ico">${svg(ICON.clock,16)}</span></div>
-      <div><div class="n">${cnt(main,"진행중")}<small>건</small></div><div class="l">관계기관 회신 대기·협의 중</div></div></div>
+    <div class="kpi ing"><div class="top"><span class="tagl">진행·확인 중</span><span class="ico">${svg(ICON.clock,16)}</span></div>
+      <div><div class="n">${cnt(main,"진행중") + cnt(main,"결과확인필요")}<small>건</small></div><div class="l">추진 중 ${cnt(main,"진행중")}건 · 결과 확인 중 ${cnt(main,"결과확인필요")}건</div></div></div>
     <div class="kpi hl"><div class="top"><span class="tagl">수용률</span><span class="ico">${svg(ICON.pie,16)}</span></div>
       <div><div class="n">${rate ?? "-"}<small>%</small></div><div class="l">수용 여부가 확정된 ${won + cnt(main,"수용곤란")}건 중 ${won}건 반영</div></div>
       <div class="meter"><i style="width:${rate ?? 0}%"></i></div></div>`;
@@ -610,7 +616,7 @@ function draw(rows){
     if (r.docUrl) a.push(`<a href="${esc(r.docUrl)}" target="_blank" rel="noopener">건의문 원문</a>`);
     if (r.replyUrl) a.push(`<a href="${esc(r.replyUrl)}" target="_blank" rel="noopener">회신문 원문</a>`);
     return a.length ? a.join("") : `<span class="none">원문 준비 중</span>`; };
-  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? "관계기관 회신을 기다리고 있습니다." : r.status === "결과확인필요" ? "관계기관에 건의를 전달했습니다." : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다." : esc(LABEL[r.status] || r.status);
+  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? "관계기관이 추진 중으로 회신했습니다." : r.status === "결과확인필요" ? "관계기관에 건의를 전달했으며, 결과를 확인하고 있습니다." : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다." : esc(LABEL[r.status] || r.status);
   const histHtml = r => {
     const parts = r.themes.map(t => {
       const all = rows.filter(o => (MAIN.includes(o.kind) || o.kind === REC) && o.themes.includes(t)).sort((a,b) => a.date.localeCompare(b.date));
@@ -640,7 +646,7 @@ function draw(rows){
           <dt>처리 결과</dt><dd class="pl">${result(r)}</dd>
           ${r.win ? `<dt>성과</dt><dd><b>${esc(r.win)}</b></dd>` : ""}
           ${hasFu(r) ? `<dt>건의 이후 경과</dt><dd>${progList(r)}</dd>` : ""}
-          ${(t => t.length ? `<dt>함께 건의한 항목</dt><dd><ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul></dd>` : "")(together(r))}
+          ${(t => t.length ? `<dt>함께 건의한 항목</dt><dd>${t.length > 4 ? `<details class="tgd"><summary>같은 자리에서 건의한 ${t.length + 1}건 보기</summary><ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul></details>` : `<ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul>`}</dd>` : "")(together(r))}
           ${r.replyDate ? `<dt>회신일</dt><dd>${fmtDate(r.replyDate)}</dd>` : ""}
           ${histHtml(r)}
           <dt>원문</dt><dd class="files">${files(r)}</dd></dl></div></div>`).join("")
