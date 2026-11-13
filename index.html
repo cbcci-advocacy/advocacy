@@ -616,7 +616,7 @@ function draw(rows){
     if (r.docUrl) a.push(`<a href="${esc(r.docUrl)}" target="_blank" rel="noopener">건의문 원문</a>`);
     if (r.replyUrl) a.push(`<a href="${esc(r.replyUrl)}" target="_blank" rel="noopener">회신문 원문</a>`);
     return a.length ? a.join("") : `<span class="none">원문 준비 중</span>`; };
-  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? "관계기관이 추진 중으로 회신했습니다." : r.status === "결과확인필요" ? "관계기관에 건의를 전달했으며, 결과를 확인하고 있습니다." : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다." : esc(LABEL[r.status] || r.status);
+  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? (r.reply ? "관계기관이 추진 중으로 회신했습니다." : "관계기관 회신은 없었으나, 건의 이후 관련 제도 변화가 확인되었습니다.") : r.status === "결과확인필요" ? "관계기관에 건의를 전달했으며, 결과를 확인하고 있습니다." : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다." : esc(LABEL[r.status] || r.status);
   const histHtml = r => {
     const parts = r.themes.map(t => {
       const all = rows.filter(o => (MAIN.includes(o.kind) || o.kind === REC) && o.themes.includes(t)).sort((a,b) => a.date.localeCompare(b.date));
