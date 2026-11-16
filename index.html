@@ -191,9 +191,11 @@ button.fc:hover .go{color:var(--brand)}
 .win .wh{display:block;margin:2px 0 0;font-size:15.5px;font-weight:700;line-height:1.45;text-wrap:balance}
 .win .wr{display:block;margin:0;font-size:13.5px;color:var(--muted);flex:1}
 .pl{white-space:pre-line}
+.rsum{display:block;font-weight:650;letter-spacing:-.012em}
+.rfull{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);color:var(--muted);font-size:14px}
 .rebadge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--ing);background:var(--ing-bg);border-radius:6px;padding:1px 7px;margin-left:4px;vertical-align:2px;white-space:nowrap}
 .tag.ev{background:var(--brand-soft);color:var(--brand);font-weight:600}
-.win .wr{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.win .wr{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
 .win .wr.win1{color:var(--ink);font-weight:600;font-size:14px}
 .tog{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13.5px}
 .tgd>summary{cursor:pointer;font-size:13.5px;color:var(--c-accent,#1f4e79);list-style:none;display:inline-flex;align-items:center;gap:4px}
@@ -341,7 +343,7 @@ html{scroll-behavior:smooth}
   </section>
 
   <section class="panel" id="cases-panel" aria-labelledby="h-cases">
-    <div class="ph"><div><h2 id="h-cases">주요 성과</h2><p>회원사의 건의가 실제로 반영된 최근 사례입니다.</p></div></div>
+    <div class="ph"><div><h2 id="h-cases">주요 건의 사례</h2><p>충남북부상공회의소가 회원사 의견을 관계기관에 전달한 주요 사례와 처리 경과입니다.</p></div></div>
     <div class="cases" id="cases"></div>
   </section>
 
@@ -481,7 +483,7 @@ function toRow(o){
     title: pick(o,"제목"), short: pick(o,"짧은제목"), summary: pick(o,"건의요지"), status: pick(o,"처리결과"),
     reply: pick(o,"회신·후속조치","회신"), replyDate: toISO(pick(o,"회신일")),
     themes: pick(o,"연관주제").split("|").map(t => t.trim()).filter(Boolean),
-    docUrl: safeUrl(pick(o,"건의문")), replyUrl: safeUrl(pick(o,"회신문")), pin: /^(y|o|○|예)$/i.test(pick(o,"주요성과").trim()), event: pick(o,"계기"), win: pick(o,"성과한줄"),
+    docUrl: safeUrl(pick(o,"건의문")), replyUrl: safeUrl(pick(o,"회신문")), pin: /^(y|o|○|예)$/i.test(pick(o,"주요성과").trim()), event: pick(o,"계기"), win: pick(o,"처리요약") || pick(o,"성과한줄"),
     refl: pick(o,"반영현황"), prog: parseProg(pick(o,"건의이후경과")) };
 }
 async function getCSV(url, label){
@@ -571,11 +573,27 @@ function draw(rows){
   const nth = r => r.kind !== REC && r.themes.length ? new Set(main.filter(o => o.date < r.date && o.themes.some(t => r.themes.includes(t))).map(o => o.date)).size + 1 : 1;
   const rebadge = r => { const n = nth(r); return n > 1 ? `<span class="rebadge">재건의 · ${n}회째</span>` : ""; };
   const together = r => r.event ? main.filter(o => o !== r && o.date === r.date && o.event === r.event) : [];
+  // 처리 요약이 없을 때 회신 원문을 문장 단위로 잘라 쓴다(문단 중간에서 끊기지 않게)
+  const noReply = r => r.status === "진행중" ? "관계기관 회신은 없었으나, 건의 이후 관련 제도 변화가 확인되었습니다."
+    : r.status === "결과확인필요" ? "관계기관에 건의를 전달했으며, 결과를 확인하고 있습니다."
+    : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다."
+    : "관계기관에 건의를 전달했습니다.";
+  const brief = r => {
+    if (r.win) return r.win;
+    const t = (r.reply || "").replace(/\s+/g, " ").trim();
+    if (!t) return noReply(r);
+    if (t.length <= 120) return t;
+    const cut = t.slice(0, 120);
+    const i = Math.max(cut.lastIndexOf("다. "), cut.lastIndexOf("음 "), cut.lastIndexOf("함 "), cut.lastIndexOf(". "));
+    if (i > 40) return cut.slice(0, i + 1).trim();
+    const sp = cut.lastIndexOf(" ");
+    return (sp > 40 ? cut.slice(0, sp) : cut) + "…";
+  };
   $("cases-panel").hidden = !wins.length;
   $("cases").innerHTML = wins.map(r => {
-    return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt"><span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span><span class="wd">${fmtDate(r.date)}</span></div>
+    return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt"><span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span><span class="wd">건의일 ${fmtDate(r.date)}</span></div>
       <span class="wh">${esc(r.short || r.title)} ${rebadge(r)}</span>
-      <span class="wr${r.win ? " win1" : ""}">${r.win ? esc(r.win) : (r.reply ? esc(r.reply) : "건의 내용이 관계기관에 반영되었습니다.")}</span>
+      <span class="wr${r.win ? " win1" : ""}">${esc(brief(r))}</span>
       <div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div><span class="more-link">자세히 보기 ›</span></button>`;
   }).join("");
 
@@ -616,7 +634,14 @@ function draw(rows){
     if (r.docUrl) a.push(`<a href="${esc(r.docUrl)}" target="_blank" rel="noopener">건의문 원문</a>`);
     if (r.replyUrl) a.push(`<a href="${esc(r.replyUrl)}" target="_blank" rel="noopener">회신문 원문</a>`);
     return a.length ? a.join("") : `<span class="none">원문 준비 중</span>`; };
-  const result = r => r.reply ? esc(r.reply) : r.status === "진행중" ? (r.reply ? "관계기관이 추진 중으로 회신했습니다." : "관계기관 회신은 없었으나, 건의 이후 관련 제도 변화가 확인되었습니다.") : r.status === "결과확인필요" ? "관계기관에 건의를 전달했으며, 결과를 확인하고 있습니다." : r.status === "회신없음" ? "관계기관으로부터 별도 회신을 받지 못했습니다." : esc(LABEL[r.status] || r.status);
+  // 처리 결과 = 처리 요약(카드와 같은 문장) + 회신 원문. 요약이 회신을 거의 그대로 담은 짧은 건은 원문을 겹쳐 쓰지 않는다.
+  const result = r => {
+    const body = r.reply ? esc(r.reply) : esc(noReply(r));
+    if (!r.win) return body;
+    const a = r.win.replace(/\s/g, ""), b = (r.reply || "").replace(/\s/g, "");
+    const dup = !b || b.length <= a.length + 12;
+    return `<b class="rsum">${esc(r.win)}</b>${dup ? "" : `<span class="rfull">${body}</span>`}`;
+  };
   const histHtml = r => {
     const parts = r.themes.map(t => {
       const all = rows.filter(o => (MAIN.includes(o.kind) || o.kind === REC) && o.themes.includes(t)).sort((a,b) => a.date.localeCompare(b.date));
@@ -644,11 +669,10 @@ function draw(rows){
           ${r.event ? `<dt>계기</dt><dd>${esc(r.event)}</dd>` : ""}
           ${r.summary ? `<dt>건의 요지</dt><dd class="pl">${esc(r.summary)}</dd>` : ""}
           <dt>처리 결과</dt><dd class="pl">${result(r)}</dd>
-          ${r.win ? `<dt>성과</dt><dd><b>${esc(r.win)}</b></dd>` : ""}
           ${hasFu(r) ? `<dt>건의 이후 경과</dt><dd>${progList(r)}</dd>` : ""}
+          ${histHtml(r)}
           ${(t => t.length ? `<dt>함께 건의한 항목</dt><dd>${t.length > 4 ? `<details class="tgd"><summary>같은 자리에서 건의한 ${t.length + 1}건 보기</summary><ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul></details>` : `<ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul>`}</dd>` : "")(together(r))}
           ${r.replyDate ? `<dt>회신일</dt><dd>${fmtDate(r.replyDate)}</dd>` : ""}
-          ${histHtml(r)}
           <dt>원문</dt><dd class="files">${files(r)}</dd></dl></div></div>`).join("")
       : `<div class="empty">조건에 맞는 건이 없습니다. 필터를 바꿔 보세요.</div>`;
     $("more").hidden = list.length <= limit;
