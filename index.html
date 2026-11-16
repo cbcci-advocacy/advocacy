@@ -191,6 +191,10 @@ button.fc:hover .go{color:var(--brand)}
 .win .wh{display:block;margin:2px 0 0;font-size:15.5px;font-weight:700;line-height:1.45;text-wrap:balance}
 .win .wr{display:block;margin:0;font-size:13.5px;color:var(--muted);flex:1}
 .pl{white-space:pre-line}
+.allmix{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:12px;padding:11px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.allmix .am-l{font-size:12.5px;color:var(--muted);font-weight:600}
+.allmix .am-c{display:flex;flex-wrap:wrap;gap:6px 14px}
+.fc .rate b .den{display:block;font-weight:500;font-size:11.5px;color:var(--muted);letter-spacing:-.01em;margin-top:1px;text-decoration:none}
 .rsum{display:block;font-weight:650;letter-spacing:-.012em}
 .rfull{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);color:var(--muted);font-size:14px}
 .rebadge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--ing);background:var(--ing-bg);border-radius:6px;padding:1px 7px;margin-left:4px;vertical-align:2px;white-space:nowrap}
@@ -339,6 +343,7 @@ html{scroll-behavior:smooth}
   <section class="panel" aria-labelledby="h-kpi">
     <div class="ph"><div><h2 id="h-kpi">건의 현황</h2><p id="sumSub"></p></div></div>
     <div class="kpis" id="kpis"></div>
+    <div class="allmix" id="allmix" aria-label="처리 결과 구성"></div>
     <div class="ystrip" id="years" aria-label="연도별 건의 건수"></div>
   </section>
 
@@ -348,7 +353,7 @@ html{scroll-behavior:smooth}
   </section>
 
   <section class="panel" id="fu-panel" aria-labelledby="h-fu" hidden>
-    <div class="ph"><div><h2 id="h-fu">건의 이후 제도 변화</h2><p>회신 결과와 별개로, 건의 후 법령·제도가 바뀐 건을 계속 확인해 기록합니다.</p></div><button type="button" class="link" id="fu-all">모두 보기</button></div>
+    <div class="ph"><div><h2 id="h-fu">건의 이후 확인된 조치</h2><p>회신 결과와 별개로, 건의 후 법령·제도 개정, 예산 편성, 시설 설치 등 확인된 조치를 계속 기록합니다.</p></div><button type="button" class="link" id="fu-all">모두 보기</button></div>
     <div class="fus" id="fus"></div>
     <div class="fu-note">건의 이후의 변화를 정리한 것으로, 우리 건의만의 결과라는 뜻은 아닙니다.</div>
   </section>
@@ -543,11 +548,16 @@ function draw(rows){
     <div class="kpi ing"><div class="top"><span class="tagl">진행·확인 중</span><span class="ico">${svg(ICON.clock,16)}</span></div>
       <div><div class="n">${cnt(main,"진행중") + cnt(main,"결과확인필요")}<small>건</small></div><div class="l">추진 중 ${cnt(main,"진행중")}건 · 결과 확인 중 ${cnt(main,"결과확인필요")}건</div></div></div>
     <div class="kpi hl"><div class="top"><span class="tagl">수용률</span><span class="ico">${svg(ICON.pie,16)}</span></div>
-      <div><div class="n">${rate ?? "-"}<small>%</small></div><div class="l">수용 여부가 확정된 ${won + cnt(main,"수용곤란")}건 중 ${won}건 반영</div></div>
+      <div><div class="n">${rate ?? "-"}<small>%</small></div><div class="l">수용 여부가 확인된 ${won + cnt(main,"수용곤란")}건 중<br>수용·해소 및 부분수용 ${won}건</div></div>
       <div class="meter"><i style="width:${rate ?? 0}%"></i></div></div>`;
 
-  const chips = arr => { const c = BAR_ORDER.filter(s => cnt(arr, s)).map(s => `<span class="rc"><i style="background:${COLOR[s]}"></i>${LABEL[s]} <b>${cnt(arr, s)}</b></span>`).join("");
+  // 칩 합계가 총 건수와 맞도록 결과확인필요·해당없음까지 모두 표시한다
+  const chips = arr => { const used = ORDER.filter(s => cnt(arr, s));
+    const rest = arr.length - used.reduce((n, s) => n + cnt(arr, s), 0);
+    const c = used.map(s => `<span class="rc"><i style="background:${COLOR[s]}"></i>${LABEL[s]} <b>${cnt(arr, s)}</b></span>`).join("")
+      + (rest > 0 ? `<span class="rc muted">해당 없음 <b>${rest}</b></span>` : "");
     return c || `<span class="rc muted">회신 결과 정리 중</span>`; };
+  $("allmix").innerHTML = `<span class="am-l">총 ${main.length}건의 처리 결과 구성</span><span class="am-c">${chips(main)}</span>`;
   const ylist = yrs.filter(y => rows.some(r => r.year === y));
   $("years").innerHTML = `<span class="ys-label">연도별</span>` + ylist.map(y => {
     const ys = main.filter(r => r.year === y);
@@ -558,8 +568,9 @@ function draw(rows){
     .sort((a, b) => main.filter(r => r.field === b).length - main.filter(r => r.field === a).length);
   $("fields").innerHTML = flist.map(f => {
     const fs = main.filter(r => r.field === f), fr = rateOf(fs), [col, path] = FIELD_STYLE[f] || FIELD_STYLE["기타"];
+    const fw = wonOf(fs), fd = fw + cnt(fs, "수용곤란");
     return `<button type="button" class="fc" data-field="${esc(f)}"><span class="hd"><span class="tile" style="background:${col}">${svg(path,19,1.8)}</span><span><span class="nm">${esc(f)}</span><span class="sm">총 ${fs.length}건</span></span><span class="go">›</span></span>
-      <span class="rate"><span>수용률</span><b>${fr === null ? "결과 대기" : fr + "%"}</b></span>
+      <span class="rate"><span>수용률</span><b>${fr === null ? "결과 대기" : `${fr}%<s class="den">수용 여부 확인 ${fd}건 중 ${fw}건</s>`}</b></span>
       <span class="rcs">${chips(fs)}</span>
       </button>`;
   }).join("");
@@ -627,7 +638,7 @@ function draw(rows){
   opt(fy, "전체 연도", [...new Set(main.map(r => r.year))].sort().reverse(), v => v + "년");
   opt(ff, "전체 분야", [...FIELDS, ...new Set(main.map(r => r.field))].filter((f, i, a) => f && a.indexOf(f) === i && main.some(r => r.field === f)));
   opt(fst, "전체 결과", ORDER.filter(s => main.some(r => r.status === s)), s => LABEL[s]);
-  if (main.some(hasFu)) fst.insertAdjacentHTML("beforeend", `<option value="__fu">건의 이후 변화 있음</option>`);
+  if (main.some(hasFu)) fst.insertAdjacentHTML("beforeend", `<option value="__fu">건의 이후 조치 확인</option>`);
 
   const pill = r => `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`;
   const files = r => { const a = [];
@@ -655,7 +666,7 @@ function draw(rows){
     const list = ledgerSrc.filter(r => (!fy.value || String(r.year) === fy.value) && (!ff.value || r.field === ff.value)
       && (!fst.value || (fst.value === "__fu" ? hasFu(r) : r.status === fst.value))
       && (!q || (r.title + " " + r.org + " " + r.summary).toLowerCase().includes(q))).sort((a,b) => b.date.localeCompare(a.date));
-    const active = [fy.value && fy.value + "년", ff.value, fst.value && (fst.value === "__fu" ? "건의 이후 변화 있음" : LABEL[fst.value]), q && "‘" + fq.value.trim() + "’ 검색"].filter(Boolean);
+    const active = [fy.value && fy.value + "년", ff.value, fst.value && (fst.value === "__fu" ? "건의 이후 조치 확인" : LABEL[fst.value]), q && "‘" + fq.value.trim() + "’ 검색"].filter(Boolean);
     const nRec = list.filter(r => r.kind === REC).length;
     $("count").textContent = (active.length ? active.join(" · ") + " · " : "전체 ") + "건의 " + (list.length - nRec) + "건" + (nRec ? " · 건의 과제 해소 " + nRec + "건" : "");
     $("reset").hidden = !active.length;
