@@ -284,6 +284,7 @@ input[type="search"]{flex:1;min-width:180px}
 .s-neutral{color:var(--neutral);background:var(--neutral-bg)}
 .s-rec{color:#fff;background:var(--ok)}
 .s-done{color:var(--done);background:var(--done-bg)}
+.s-fu{color:var(--brand);background:var(--brand-soft)}
 .detail{display:none;padding:0 8px 16px 112px;font-size:14px}
 .item.open .detail{display:block}
 .detail dl{margin:0;display:grid;grid-template-columns:90px 1fr;gap:6px 12px;background:var(--bg);border-radius:10px;padding:14px 16px}
@@ -353,6 +354,7 @@ html{scroll-behavior:smooth}
     <div class="ph"><div><h2 id="h-kpi">건의 현황</h2><p id="sumSub"></p></div></div>
     <div class="kpis" id="kpis"></div>
     <div class="allmix" id="allmix" aria-label="그 외 처리 상태"></div>
+    <div class="allmix" id="solvemix" aria-label="건의 과제 해결 현황" hidden></div>
     <div class="allmix" id="etcmix" aria-label="그 밖의 활동" hidden></div>
   </section>
 
@@ -423,7 +425,11 @@ const LABEL = {"수용·해소":"수용·해소","부분수용":"부분수용","
 const CLS = {"수용·해소":"s-ok","부분수용":"s-part","조치완료":"s-done","수용곤란":"s-no","진행중":"s-ing"};
 const COLOR = {"수용·해소":"var(--ok)","부분수용":"var(--part)","조치완료":"var(--done)","수용곤란":"var(--no)","진행중":"var(--ing)","회신없음":"var(--neutral)","회신 대기":"color-mix(in srgb, var(--neutral) 40%, transparent)","결과확인필요":"color-mix(in srgb, var(--neutral) 40%, transparent)"};
 const ORDER = ["수용·해소","부분수용","수용곤란","진행중","회신 대기","결과확인필요","회신없음"];
-const BAR_ORDER = ORDER.filter(s => s !== "회신 대기" && s !== "결과확인필요"); // 막대·범례에는 결과가 나온 건만 색으로 표시
+const BAR_ORDER = ORDER.filter(s => s !== "회신 대기" && s !== "결과확인필요");
+// 반영 현황이 '반영'인데 처리결과가 수용·해소·부분수용이 아니면 화면 표시만 '건의 이후 반영'으로 바꾼다. 수용률과 상태별 건수는 처리결과(당시 회신) 그대로 센다.
+const isFuDone = r => r.refl === "반영" && r.status !== "수용·해소" && r.status !== "부분수용";
+const stLabel = r => isFuDone(r) ? "건의 이후 반영" : (LABEL[r.status] || r.status);
+const stCls = r => isFuDone(r) ? "s-fu" : (CLS[r.status] || "s-neutral"); // 막대·범례에는 결과가 나온 건만 색으로 표시
 const FIELDS = ["인력·고용","노동·안전","규제·인허가","세제·부담금","환경·에너지","교통·인프라","금융·투자","통상·해외","지역경제","기타"];
 const FIELD_STYLE = {
   "인력·고용":["#2f6fd6",'<circle cx="9" cy="7" r="3"/><path d="M3 19c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.5"/><path d="M15.5 13.2c3 .3 5.5 2.6 5.5 5.8"/>'],
@@ -557,7 +563,7 @@ function draw(rows){
     <div class="kpi ok"><div class="top"><span class="tagl">수용·해소 및 부분수용</span><span class="ico">${svg(ICON.check,16)}</span></div>
       <div><div class="n">${won}<small>건</small></div><div class="l">수용·해소 ${cnt(main,"수용·해소")}건 · 부분수용 ${cnt(main,"부분수용")}건</div></div></div>
     <div class="kpi hl"><div class="top"><span class="tagl">수용률</span><span class="ico">${svg(ICON.pie,16)}</span></div>
-      <div><div class="n">${rate ?? "-"}<small>%</small></div><div class="l">수용 여부 확인 ${won + cnt(main,"수용곤란")}건 중 ${won}건</div></div>
+      <div><div class="n">${rate ?? "-"}<small>%</small></div><div class="l">관계기관 회신 기준 · 수용 여부 확인 ${won + cnt(main,"수용곤란")}건 중 ${won}건</div></div>
       <div class="meter"><i style="width:${rate ?? 0}%"></i></div></div>`;
 
   // 칩 합계가 총 건수와 맞도록 결과확인필요·해당없음까지 모두 표시한다
@@ -573,6 +579,17 @@ function draw(rows){
     + restUsed.map(s => `<span class="rc"><i style="background:${COLOR[s]}"></i>${LABEL[s]} <b>${cnt(main, s)}</b></span>`).join("")
     + (restEtc > 0 ? `<span class="rc muted">해당 없음 <b>${restEtc}</b></span>` : "") + `</span>`;
 
+  // 건의 과제 해결 현황: 같은 과제(연관주제 첫 항목)를 여러 번 건의했으면 하나로 센다. 회신 결과와 건의 이후 변화(반영 현황)를 함께 본다.
+  { const g = new Map();
+    main.forEach(r => { const k = r.themes[0] || "#" + r.id; (g.get(k) || g.set(k, []).get(k)).push(r); });
+    let done = 0, part = 0;
+    g.forEach(rs => {
+      if (rs.some(r => r.status === "수용·해소" || r.refl === "반영")) done++;
+      else if (rs.some(r => r.status === "부분수용" || r.refl === "일부 반영")) part++;
+    });
+    $("solvemix").hidden = !g.size;
+    $("solvemix").innerHTML = `<span class="am-l">건의 과제 해결 현황</span><span class="am-c"><span class="rc">과제 <b>${g.size}</b></span><span class="rc"><i style="background:var(--ok)"></i>해결 <b>${done}</b></span><span class="rc"><i style="background:var(--part)"></i>일부 해결 <b>${part}</b></span></span><span class="am-l" style="font-weight:500">같은 과제를 다시 건의한 경우 한 번만 셉니다. 건의 이후 확인된 제도 변화를 포함하며, 우리 건의만의 결과라는 뜻은 아닙니다.</span>`;
+  }
   // 건의 외 활동(의견수렴·조사, 간담회·행사): 건의 건수와 섞지 않고 따로 보여 준다
   const ETC_ORDER = ["의견수렴·조사", "간담회·행사", "기타건의활동"];
   const etcKinds = [...ETC_ORDER, ...new Set(etc.map(r => r.kind))].filter((k, i, a) => a.indexOf(k) === i && etc.some(r => r.kind === k));
@@ -618,7 +635,7 @@ function draw(rows){
   };
   $("cases-panel").hidden = !wins.length;
   $("cases").innerHTML = wins.map(r => {
-    return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt"><span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span><span class="wd">건의일 ${fmtDate(r.date)}</span></div>
+    return `<button type="button" class="win" data-id="${esc(r.id)}"><div class="wt"><span class="pill ${stCls(r)}">${esc(stLabel(r))}</span><span class="wd">건의일 ${fmtDate(r.date)}</span></div>
       <span class="wh">${esc(r.short || r.title)} ${rebadge(r)}</span>
       <span class="wr${r.win ? " win1" : ""}">${esc(brief(r))}</span>
       <div class="tags"><span class="tag ev">${esc(dispOrg(r.org))}</span><span class="tag">${esc(r.field)}</span></div><span class="more-link">자세히 보기 ›</span></button>`;
@@ -658,7 +675,7 @@ function draw(rows){
   opt(fst, "전체 결과", ORDER.filter(s => main.some(r => r.status === s)), s => LABEL[s]);
   if (main.some(hasFu)) fst.insertAdjacentHTML("beforeend", `<option value="__fu">건의 이후 조치 확인</option>`);
 
-  const pill = r => `<span class="pill ${CLS[r.status] || "s-neutral"}">${esc(LABEL[r.status] || r.status)}</span>`;
+  const pill = r => `<span class="pill ${stCls(r)}">${esc(stLabel(r))}</span>`;
   const files = r => { const a = [];
     if (r.docUrl) a.push(`<a href="${esc(r.docUrl)}" target="_blank" rel="noopener">건의문 원문</a>`);
     if (r.replyUrl) a.push(`<a href="${esc(r.replyUrl)}" target="_blank" rel="noopener">회신문 원문</a>`);
@@ -675,7 +692,7 @@ function draw(rows){
     const parts = r.themes.map(t => {
       const all = rows.filter(o => (MAIN.includes(o.kind) || o.kind === REC) && o.themes.includes(t)).sort((a,b) => a.date.localeCompare(b.date));
       if (all.length < 2) return "";
-      return `<div class="hgrp"><div class="hname">${esc(t)} · ${all.filter(o => o.kind !== REC).length}회 건의${all.some(o => o.kind === REC) ? " · 실현" : ""}</div><ol class="hist">${all.map(o => `<li${o === r ? ' class="me"' : ""}><span class="d">${fmtDate(o.date)}</span> ${esc(o.short || o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ol></div>`;
+      return `<div class="hgrp"><div class="hname">${esc(t)} · ${all.filter(o => o.kind !== REC).length}회 건의${all.some(o => o.kind === REC) ? " · 실현" : ""}</div><ol class="hist">${all.map(o => `<li${o === r ? ' class="me"' : ""}><span class="d">${fmtDate(o.date)}</span> ${esc(o.short || o.title)} <span class="hs ${isFuDone(o) ? "s-fu" : (CLS[o.status] || "")}">${esc(stLabel(o))}</span></li>`).join("")}</ol></div>`;
     }).join("");
     return parts ? `<dt>추진 이력</dt><dd>${parts}</dd>` : ""; };
 
@@ -705,13 +722,14 @@ function draw(rows){
         ${pill(r)}</button>
         <div class="detail" id="d${i}"><dl>
           <dt>구분</dt><dd>${esc(r.kind)}</dd>
+          ${isFuDone(r) ? `<dt>당시 회신 결과</dt><dd>${esc(LABEL[r.status] || r.status)}</dd>` : ""}
           ${r.event ? `<dt>계기</dt><dd>${esc(r.event)}</dd>` : ""}
           ${r.summary ? `<dt>${MAIN.includes(r.kind) || r.kind === REC ? "건의 요지" : "내용"}</dt><dd class="pl">${esc(r.summary)}</dd>` : ""}
           ${MAIN.includes(r.kind) || r.kind === REC ? `<dt>처리 결과</dt><dd class="pl">${result(r)}</dd>`
             : ((r.win || r.reply) ? `<dt>결과</dt><dd class="pl">${esc(r.win || r.reply)}</dd>` : "")}
           ${hasFu(r) ? `<dt>건의 이후 경과</dt><dd>${progList(r)}</dd>` : ""}
           ${histHtml(r)}
-          ${(t => t.length ? `<dt>함께 건의한 항목</dt><dd>${t.length > 4 ? `<details class="tgd"><summary>같은 자리에서 건의한 ${t.length + 1}건 보기</summary><ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul></details>` : `<ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${CLS[o.status] || ""}">${esc(LABEL[o.status] || o.status)}</span></li>`).join("")}</ul>`}</dd>` : "")(together(r))}
+          ${(t => t.length ? `<dt>함께 건의한 항목</dt><dd>${t.length > 4 ? `<details class="tgd"><summary>같은 자리에서 건의한 ${t.length + 1}건 보기</summary><ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${isFuDone(o) ? "s-fu" : (CLS[o.status] || "")}">${esc(stLabel(o))}</span></li>`).join("")}</ul></details>` : `<ul class="tog">${t.map(o => `<li>${esc(o.title)} <span class="hs ${isFuDone(o) ? "s-fu" : (CLS[o.status] || "")}">${esc(stLabel(o))}</span></li>`).join("")}</ul>`}</dd>` : "")(together(r))}
           ${r.replyDate ? `<dt>회신일</dt><dd>${fmtDate(r.replyDate)}</dd>` : ""}
           <dt>원문</dt><dd class="files">${files(r)}</dd></dl></div></div>`).join("")
       : `<div class="empty">조건에 맞는 건이 없습니다. 필터를 바꿔 보세요.</div>`;
